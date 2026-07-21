@@ -4,7 +4,7 @@ A93: xDS ExtProc Support
 * Approver: @ejona86, @dfawley
 * Status: {Draft, In Review, Ready for Implementation, Implemented}
 * Implemented in: <language, ...>
-* Last updated: 2026-06-23
+* Last updated: 2026-07-21
 * Discussion at: https://groups.google.com/g/grpc-io/c/AqqG4kkUc08
 
 ## Abstract
@@ -374,6 +374,21 @@ If the ext_proc filter receives more data than allowed by flow control
 is less than or equal to 0), it will cancel the ext_proc stream and
 treat it as having failed with a non-OK status.
 
+Filter implementations may determine the number of window bytes they
+return as needed based on their own memory management requirements.
+One simple implementation would be that as the filter reads each message
+from the side-stream, it will send back a window update refilling the
+number of bytes it just read.  However, implementations are also free
+to determine window updates more dynamically based on memory usage; for
+example, the C-core will likely use `ResourceQuota` to dynamically
+resize flow control windows.  Note that care must be taken to avoid
+impacting performance or causing deadlocks.  For example, to avoid
+chattiness on the wire, it may be desirable to wait (up to at least
+some limit) for the next message being sent anyway rather than sending
+a message containing only a window update, but at the same time,
+delaying a window update may cause unnecessary delays on the sender
+side.
+
 In [observability mode](#observability-mode), flow control works a
 little differently, because it does not read from the ext_proc
 sidestream and therefore does not suffer from the deadlock problem
@@ -591,7 +606,8 @@ sent to the server will be populated as follows:
     if the client sends a half-close when there is no message to send
     (i.e., if the client never sent any message on the stream, or if
     the half-close is sent after the filter has already sent the last
-    message to the ext_proc server).
+    message to the ext_proc server).  This will never be true unless
+    `end_of_stream` is true.
   - grpc_message_compressed (new field being added in
     https://github.com/envoyproxy/envoy/pull/38753): Never set.
 - [response_trailers](https://github.com/envoyproxy/envoy/blob/cdd19052348f7f6d85910605d957ba4fe0538aec/api/envoy/service/ext_proc/v3/external_processor.proto#L103).
@@ -619,18 +635,15 @@ sent to the server will be populated as follows:
   A good default initial value is 65536, but implementations can raise
   or lower that based on their own memory management requirements.
 - `client_window_update` (new field being added in
-  https://github.com/envoyproxy/envoy/pull/45509): Normally, whenever the
-  filter reads a request body chunk from the ext_proc side-stream, it will
-  send a window update setting the
-  `window_increment_sidesteram_to_upstream` field to the number of bytes
-  it just read.  Similarly, whenever the filter reads a response body
-  chunk from the ext_proc side-stream, it will send a window update
-  setting the `window_increment_sidestream_to_downstream` field to the
-  number of bytes it just read.  Implementations may modify the number
-  of window bytes they return as needed based on their own memory
-  management requirements.  Note that the `client_window_update` may be
-  sent in a message by itself or along with another message that the
-  filter was going to send anyway.
+  https://github.com/envoyproxy/envoy/pull/45509): The filter will set
+  this field to provide flow control window back to the ext_proc server,
+  as described in [Flow Control](#flow-control) above.  The
+  `window_increment_sidesteram_to_upstream` field provides more window
+  for client-to-server messages, whereas the
+  `window_increment_sidestream_to_downstream` field provides more window
+  for server-to-client messages.  Note that the `client_window_update`
+  may be sent in a message by itself or along with another message that
+  the filter was going to send anyway.
 - Note: We will not populate request_trailers, because gRPC never sends
   request trailers.
 - Note: We will not populate metadata_context, because gRPC does not
