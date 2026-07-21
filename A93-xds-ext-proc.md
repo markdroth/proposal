@@ -33,7 +33,6 @@ also make use of the `trusted_xds_server` server feature introduced in
 * [A102: xDS GrpcService Support][A102] (pending)
 * [A106: xDS Unified Matcher and CEL Integration][A106] (pending)
 * [A103: xDS Composite Filter][A103]
-* [A60: xDS-Based Stateful Session Affinity for Weighted Clusters][A60]
 * [A79: Non-Per-Call Metrics Architecture][A79]
 * [A66: OpenTelemetry Metrics][A66]
 * [A89: Backend Service Metric Label][A89]
@@ -45,7 +44,6 @@ also make use of the `trusted_xds_server` server feature introduced in
 [A102]: https://github.com/grpc/proposal/pull/510
 [A106]: https://github.com/grpc/proposal/pull/520
 [A103]: A103-xds-composite-filter.md
-[A60]: A60-xds-stateful-session-affinity-weighted-clusters.md
 [A79]: A79-non-per-call-metrics-architecture.md
 [A89]: A89-backend-service-metric-label.md
 [A66]: A66-otel-stats.md
@@ -838,7 +836,6 @@ The client-side metrics will have the following labels:
 | Name        | Disposition | Description |
 | ----------- | ----------- | ----------- |
 | grpc.target | required | The target of the gRPC channel in which ext_proc is used, as the defined in [A66]. |
-| grpc.lb.backend_service | optional | The backend service to which the traffic is being sent, as defined in [A89].  This will be populated from the xDS cluster name, which will be passed to the ext_proc filter as described in [A60]. |
 
 The following client-side metrics will be exported:
 
