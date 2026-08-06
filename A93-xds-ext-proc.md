@@ -4,7 +4,7 @@ A93: xDS ExtProc Support
 * Approver: @ejona86, @dfawley
 * Status: {Draft, In Review, Ready for Implementation, Implemented}
 * Implemented in: <language, ...>
-* Last updated: 2026-07-21
+* Last updated: 2026-08-06
 * Discussion at: https://groups.google.com/g/grpc-io/c/AqqG4kkUc08
 
 ## Abstract
@@ -841,10 +841,10 @@ The following client-side metrics will be exported:
 
 | Name          | Type  | Unit  | Labels  | Description |
 | ------------- | ----- | ----- | ------- | ----------- |
-| grpc.client_ext_proc.client_headers_duration | Histogram | s | grpc.target, grpc.lb.backend_service | Time between when the ext_proc filter sees the client's headers and when it allows those headers to continue on to the next filter. |
-| grpc.client_ext_proc.client_half_close_duration | Histogram | s | grpc.target, grpc.lb.backend_service | Time between when the ext_proc filter sees the client's half-close and when it allows that half-close to continue on to the next filter. |
-| grpc.client_ext_proc.server_headers_duration | Histogram | s | grpc.target, grpc.lb.backend_service | Time between when the ext_proc filter sees the server's headers and when it allows those headers to continue on to the next filter. |
-| grpc.client_ext_proc.server_trailers_duration | Histogram | s | grpc.target, grpc.lb.backend_service | Time between when the ext_proc filter sees the server's trailers and when it allows those trailers to continue on to the next filter. |
+| grpc.client_ext_proc.client_headers_duration | Histogram | s | grpc.target | Time between when the ext_proc filter sees the client's headers and when it allows those headers to continue on to the next filter. |
+| grpc.client_ext_proc.client_half_close_duration | Histogram | s | grpc.target | Time between when the ext_proc filter sees the client's half-close and when it allows that half-close to continue on to the next filter. |
+| grpc.client_ext_proc.server_headers_duration | Histogram | s | grpc.target | Time between when the ext_proc filter sees the server's headers and when it allows those headers to continue on to the next filter. |
+| grpc.client_ext_proc.server_trailers_duration | Histogram | s | grpc.target | Time between when the ext_proc filter sees the server's trailers and when it allows those trailers to continue on to the next filter. |
 
 #### Server-Side Metrics
 
