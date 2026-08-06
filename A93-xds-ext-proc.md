@@ -352,10 +352,10 @@ control: as soon as it receives these initial values, it can immediately
 send a window update that reduces the window, but it must be prepared
 to handle any data that the sender has already sent.
 
-As the receiver reads data, it must send back a window update telling
-the sender that it can send more data.  The window update can be
-positive or negative.  The sender must immediately add this value to
-its available flow control window for sending.
+As the receiver finishes processing data, it must send back a window
+update telling the sender that it can send more data.  The window update
+can be positive or negative.  The sender must immediately add this value
+to its available flow control window for sending.
 
 The ext_proc filter will use this mechanism to handle push-back on each
 path by not considering reads complete (and therefore releasing the flow
@@ -367,25 +367,19 @@ send the message on the sidestream and then wait for the write to the
 sidestream to clear flow control at the HTTP/2 layer for the sidestream,
 and only then will it release flow control back to the downstream.
 
-If the ext_proc filter receives more data than allowed by flow control
-(i.e., if it receives more data once the available flow control window
-is less than or equal to 0), it will cancel the ext_proc stream and
-treat it as having failed with a non-OK status.
-
 Filter implementations may determine the number of window bytes they
 return as needed based on their own memory management requirements.
-One simple implementation would be that as the filter reads each message
-from the side-stream, it will send back a window update refilling the
-number of bytes it just read.  However, implementations are also free
+One simple implementation would be that as the filter processes each
+message from the side-stream, it will send back a window update refilling
+the number of bytes it just read.  However, implementations are also free
 to determine window updates more dynamically based on memory usage; for
-example, the C-core will likely use `ResourceQuota` to dynamically
-resize flow control windows.  Note that care must be taken to avoid
-impacting performance or causing deadlocks.  For example, to avoid
-chattiness on the wire, it may be desirable to wait (up to at least
-some limit) for the next message being sent anyway rather than sending
-a message containing only a window update, but at the same time,
-delaying a window update may cause unnecessary delays on the sender
-side.
+example, the C-core will likely use `ResourceQuota` to dynamically resize
+flow control windows.  Note that care must be taken to avoid impacting
+performance or causing deadlocks.  For example, to avoid chattiness
+on the wire, it may be desirable to wait (up to at least some limit)
+for the next message being sent anyway rather than sending a message
+containing only a window update, but at the same time, delaying a window
+update may cause unnecessary delays on the sender side.
 
 In [observability mode](#observability-mode), flow control works a
 little differently, because it does not read from the ext_proc
