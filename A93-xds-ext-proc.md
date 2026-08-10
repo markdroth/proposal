@@ -4,7 +4,7 @@ A93: xDS ExtProc Support
 * Approver: @ejona86, @dfawley
 * Status: {Draft, In Review, Ready for Implementation, Implemented}
 * Implemented in: <language, ...>
-* Last updated: 2026-08-06
+* Last updated: 2026-08-10
 * Discussion at: https://groups.google.com/g/grpc-io/c/AqqG4kkUc08
 
 ## Abstract
@@ -371,15 +371,16 @@ Filter implementations may determine the number of window bytes they
 return as needed based on their own memory management requirements.
 One simple implementation would be that as the filter processes each
 message from the side-stream, it will send back a window update refilling
-the number of bytes it just read.  However, implementations are also free
-to determine window updates more dynamically based on memory usage; for
-example, the C-core will likely use `ResourceQuota` to dynamically resize
+the number of bytes it just read.  However, implementations are also
+free to determine window updates more dynamically based on memory usage;
+for example, the C-core may use `ResourceQuota` to dynamically resize
 flow control windows.  Note that care must be taken to avoid impacting
 performance or causing deadlocks.  For example, to avoid chattiness
-on the wire, it may be desirable to wait (up to at least some limit)
-for the next message being sent anyway rather than sending a message
-containing only a window update, but at the same time, delaying a window
-update may cause unnecessary delays on the sender side.
+on the wire, it is undesirable to proactively send a window update if
+the filter is not sending a message for some other reason; instead,
+implementations should wait to send the window update until either the
+next message is being sent or half of the flow control window is consumed,
+whichever happens first.
 
 In [observability mode](#observability-mode), flow control works a
 little differently, because it does not read from the ext_proc
