@@ -4,7 +4,7 @@ A93: xDS ExtProc Support
 * Approver: @ejona86, @dfawley
 * Status: {Draft, In Review, Ready for Implementation, Implemented}
 * Implemented in: <language, ...>
-* Last updated: 2026-08-10
+* Last updated: 2026-08-19
 * Discussion at: https://groups.google.com/g/grpc-io/c/AqqG4kkUc08
 
 ## Abstract
@@ -145,36 +145,42 @@ client or server messages to the ext_proc stream (which will be the case
 if the body send mode is NONE), then the data plane RPC will instead be
 allowed to continue, with no further action taken by the ext_proc filter.
 
-If the stream terminates with OK status, that indicates to the filter
-that it no longer needs to send any more events to the ext_proc server
-for that data plane RPC; all remaining events may proceed on the data
-plane RPC without any further action taken by the ext_proc filter.
-However, when not in [observability mode](#observability-mode), if the
-ext_proc filter is configured to send request or response messages
-to the ext_proc server, the ext_proc server must drain the stream
-before terminating.  This is because the filter may have already sent
-messages on the stream that the server has not yet seen, and if the
+If the stream terminates with OK status, that indicates to the filter that
+it no longer needs to send any more events to the ext_proc server for
+that data plane RPC; all remaining events may proceed on the data plane
+RPC without any further action taken by the ext_proc filter.  However,
+when not in [observability mode](#observability-mode), if the ext_proc
+filter is configured to send request or response messages to the ext_proc
+server, the ext_proc server must drain the stream of request or response
+messages before terminating.  This is because the filter may have already
+sent messages on the stream that the server has not yet seen, and if the
 server never echoes them back, then the messages will simply be dropped
 from the stream.  In order to avoid that, the following drain procedure
-will be used:
+will be used for either the request or response directions, as per the
+changes in https://github.com/envoyproxy/envoy/pull/45901:
 
 1. The ext_proc server will send an ext_proc response with the
-   `request_drain` field (see https://github.com/envoyproxy/envoy/pull/38753)
-   set to true.  The filter will react by sending a half-close on the
-   ext_proc stream.  Note that at this point, the filter must stop
+   `request_drain_requests` or `request_drain_responses` fields
+   set to true.  The filter will react by sending `request_body` or
+   `response_body` message with the `drain_complete` field set to true
+   on the ext_proc stream.  Note that at this point, the filter must stop
    reading messages from the data plane stream, so that flow control
    push-back occurs.
 2. The ext_proc server will echo all messages received from the filter
-   back to the filter without modification, until it sees the half close
-   from the filter.  It will then terminate the ext_proc stream with OK
-   status.
-3. When the filter sees the ext_proc stream terminate with OK status, it
-   will resume reading messages from the data plane stream, and all such
-   messages will proceed on the data plane stream without modification.
+   back to the filter without modification, until it sees the
+   `drain_complete` message from the filter.  At that point, the
+   ext_proc server will send a final body response with the
+   `drain_complete` field set to true.
+3. When the filter sees the `drain_complete` echoed back from the
+   ext_proc server, it will resume reading messages from the data plane
+   stream, and all such messages will proceed on the data plane stream
+   without modification.
 
-If the ext_proc stream is terminated with an OK status without ever
-having initiated the above drain procedure, then the filter will treat
-it as if the ext_proc stream terminated with a non-OK status.
+If the filter is not in observability mode, has started sending request
+or response messages to the ext_proc server, and the ext_proc server has
+not used the above procedure to drain the request or response messages,
+then if the ext_proc stream is terminated with an OK status, the filter
+will treat it as if the ext_proc stream terminated with a non-OK status.
 
 #### Payload Handling
 
@@ -601,6 +607,11 @@ sent to the server will be populated as follows:
     the half-close is sent after the filter has already sent the last
     message to the ext_proc server).  This will never be true unless
     `end_of_stream` is true.
+  - drain_complete (new field added in
+    https://github.com/envoyproxy/envoy/pull/45901): Will be set to
+    true when the ext_proc server requests a drain of either request or
+    response messages.  See [Early Termination of the ext_proc
+    Stream](#early-termination-of-the-ext_proc-stream) above.
   - grpc_message_compressed (new field being added in
     https://github.com/envoyproxy/envoy/pull/38753): Never set.
 - [response_trailers](https://github.com/envoyproxy/envoy/blob/cdd19052348f7f6d85910605d957ba4fe0538aec/api/envoy/service/ext_proc/v3/external_processor.proto#L103).
@@ -724,6 +735,11 @@ as follows:
           https://github.com/envoyproxy/envoy/pull/38753): Will be set to true
           to indicate a half-close with no message to send.  Ignored if
           end_of_stream is false.
+        - drain_complete (new field added in
+          https://github.com/envoyproxy/envoy/pull/45901): When true,
+          indicates that the ext_proc server has finished flushing
+          messages and the drain is complete.  See [Early Termination of the
+          ext_proc Stream](#early-termination-of-the-ext_proc-stream) above.
         - grpc_message_compressed (new field being added in
           https://github.com/envoyproxy/envoy/pull/38753): If set to
           true, the filter will cancel the ext_proc stream and treat it
@@ -760,12 +776,10 @@ as follows:
     Mutations](#header-mutations) below for details.
   - We will ignore the status and body fields, since these don't apply
     to gRPC.
-- request_drain (new field being added in
-  https://github.com/envoyproxy/envoy/pull/38753): If true, the filter
-  will send a half-close on the ext_proc stream.  It will then continue
-  sending message bodies received from the ext_proc server until the
-  ext_proc stream terminates with OK status.  After that, any subsequent
-  message on the stream will be passed through as-is.
+- request_drain_requests and request_drain_responses (new fields being
+  added in https://github.com/envoyproxy/envoy/pull/45901): See [Early
+  Termination of the ext_proc
+  Stream](#early-termination-of-the-ext_proc-stream) above.
 - `server_window_update` (new field being added in
   https://github.com/envoyproxy/envoy/pull/45509): Whenever the filter
   receives a message with this field set, it will increment its
