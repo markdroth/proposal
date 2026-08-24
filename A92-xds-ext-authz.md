@@ -4,7 +4,7 @@ A92: xDS ExtAuthz Support
 * Approver: @ejona86, @dfawley
 * Status: {Draft, In Review, Ready for Implementation, Implemented}
 * Implemented in: <language, ...>
-* Last updated: 2026-05-26
+* Last updated: 2026-08-24
 * Discussion at: https://groups.google.com/g/grpc-io/c/sPfb9NoB474
 
 ## Abstract
@@ -36,7 +36,6 @@ also make use of the `trusted_xds_server` server feature introduced in
 * [A60: xDS-Based Stateful Session Affinity for Weighted Clusters][A60]
 * [A79: Non-Per-Call Metrics Architecture][A79]
 * [A66: OpenTelemetry Metrics][A66]
-* [A89: Backend Service Metric Label][A89]
 
 [A36]: A36-xds-for-servers.md
 [A39]: A39-xds-http-filters.md
@@ -46,7 +45,6 @@ also make use of the `trusted_xds_server` server feature introduced in
 [A102]: https://github.com/grpc/proposal/pull/510
 [A60]: A60-xds-stateful-session-affinity-weighted-clusters.md
 [A79]: A79-non-per-call-metrics-architecture.md
-[A89]: A89-backend-service-metric-label.md
 [A66]: A66-otel-stats.md
 
 ## Proposal
@@ -345,16 +343,15 @@ The client-side metrics will have the following labels:
 | Name        | Disposition | Description |
 | ----------- | ----------- | ----------- |
 | grpc.target | required | The target of the gRPC channel in which ext_authz is used, as the defined in [A66]. |
-| grpc.lb.backend_service | optional | The backend service to which the traffic is being sent, as defined in [A89].  This will be populated from the xDS cluster name, which will be passed to the ext_authz filter as described in [A60]. |
 
 The following client-side metrics will be exported:
 
 | Name          | Type  | Unit  | Labels  | Description |
 | ------------- | ----- | ----- | ------- | ----------- |
-| grpc.client_ext_authz.allowed_rpcs | Counter | {RPCs} | grpc.target, grpc.lb.backend_service | Number of RPCs that were allowed by the ext_authz server. |
-| grpc.client_ext_authz.denied_rpcs | Counter | {RPCs} | grpc.target, grpc.lb.backend_service | Number of RPCs that were denied by the ext_authz server. |
-| grpc.client_ext_authz.filter_disabled_rpcs | Counter | {RPCs} | grpc.target, grpc.lb.backend_service | Number of RPCs for which the filter was disabled. |
-| grpc.client_ext_authz.failed_rpcs | Counter | {RPCs} | grpc.target, grpc.lb.backend_service | Number of RPCs for which the ext_authz call-out failed. |
+| grpc.client_ext_authz.allowed_rpcs | Counter | {RPCs} | grpc.target | Number of RPCs that were allowed by the ext_authz server. |
+| grpc.client_ext_authz.denied_rpcs | Counter | {RPCs} | grpc.target | Number of RPCs that were denied by the ext_authz server. |
+| grpc.client_ext_authz.filter_disabled_rpcs | Counter | {RPCs} | grpc.target | Number of RPCs for which the filter was disabled. |
+| grpc.client_ext_authz.failed_rpcs | Counter | {RPCs} | grpc.target | Number of RPCs for which the ext_authz call-out failed. |
 
 #### Server-Side Metrics
 
