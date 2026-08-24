@@ -305,9 +305,10 @@ fields or to the data plane RPC's response headers via the
 [ok_response.response_headers_to_add](https://github.com/envoyproxy/envoy/blob/cdd19052348f7f6d85910605d957ba4fe0538aec/api/envoy/service/auth/v3/external_auth.proto#L104)
 field.  The entries in the `headers_to_remove` field must be valid
 gRPC header names; the other fields must be validated as per [A102].
-Note that response header mutations will be ignored if gRPC winds up
-sending a Trailers-Only response after the ext_authz filter has received
-the response from the ext_authz server.
+Header additions should be applied before header removals.  Note that
+response header mutations will be ignored if gRPC winds up sending
+a Trailers-Only response after the ext_authz filter has received the
+response from the ext_authz server.
 
 When the data plane RPC is denied, headers may be specified via the
 [denied_response.headers](https://github.com/envoyproxy/envoy/blob/cdd19052348f7f6d85910605d957ba4fe0538aec/api/envoy/service/auth/v3/external_auth.proto#L55)
