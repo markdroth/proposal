@@ -3,7 +3,7 @@ A92: xDS ExtAuthz Support
 * Author(s): @markdroth
 * Approver: @ejona86, @dfawley
 * Implemented in: <language, ...>
-* Last updated: 2026-11-05
+* Last updated: 2026-11-12
 * Discussion at: https://groups.google.com/g/grpc-io/c/sPfb9NoB474
 
 ## Abstract
@@ -116,11 +116,11 @@ filter will do the following:
   `ok_response.headers_to_remove` fields to the client initial metadata
   before forwarding it to the next filter.
 - Save the mutations from the `ok_response.response_headers_to_add` field
-  to be later applied to the server's initial metadata.  The filter
-  will then need to intercept the server initial metadata to apply
-  these mutations.  (Note: These mutations will not be applied if the
-  RPC winds up seeing a Trailers-Only response, because there is no
-  server initial metadata in that case.)
+  to be later applied to the server's initial metadata, or to the
+  server's trailing metadata if the call fails with a Trailers-Only
+  response.  This means that the filter will need to intercept the
+  server initial metadata and server trailing metadata to apply
+  these mutations.
 
 If the response indicates that the RPC should be denied, then the filter
 will immediately fail the RPC (thus generating a Trailers-Only response).
@@ -380,9 +380,10 @@ fields or to the data plane RPC's response headers via the
 field.  The entries in the `headers_to_remove` field must be valid
 gRPC header names; the other fields must be validated as per [A102].
 Header additions should be applied before header removals.  Note that
-response header mutations will be ignored if gRPC winds up sending
-a Trailers-Only response after the ext_authz filter has received the
-response from the ext_authz server.
+response header mutations will be applied to server trailing metadata
+instead of server initial metadata if gRPC winds up sending a Trailers-Only
+response after the ext_authz filter has received the response from the
+ext_authz server.
 
 When the data plane RPC is denied, headers may be specified via the
 [denied_response.headers](https://github.com/envoyproxy/envoy/blob/cdd19052348f7f6d85910605d957ba4fe0538aec/api/envoy/service/auth/v3/external_auth.proto#L55)
